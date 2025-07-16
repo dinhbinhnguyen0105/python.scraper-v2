@@ -28,6 +28,7 @@ class BaseSerivce:
         self._connection_name = connection_name
         self._db: Optional[QSqlDatabase] = None
         self._query: Optional[QSqlQuery] = None
+        self._initialize_database_connection()
 
     def _initialize_database_connection(self):
         if not QSqlDatabase.contains(self._connection_name):
