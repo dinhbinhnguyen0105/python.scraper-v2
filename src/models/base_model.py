@@ -8,15 +8,16 @@ from src import my_constants as constants
 class BaseModel(QSqlTableModel):
     def __init__(self, table_name, parent=None):
         super().__init__(parent, QSqlDatabase.database(constants.DB_CONNECTION))
-        self.setTable(tableName=table_name)
-        self.setEditStrategy(QSqlTableModel.EditStrategy.OnFieldChange)
+        self.setTable(table_name)
+        # self.setEditStrategy(QSqlTableModel.EditStrategy.OnFieldChange)
         if not self.select():
             print(
                 f"Error selecting data from table '{table_name}': {self.lastError().text()}"
             )
 
     def flags(self, index):
-        default_flags = super().flags(index=index)
+        return Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled
+        default_flags = super().flags(index)
         if self.headerData(index.column(), Qt.Orientation.Horizontal) == "id":
             return Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled
         return default_flags
@@ -25,11 +26,11 @@ class BaseModel(QSqlTableModel):
         ids = []
         for row in rows:
             if 0 <= row <= self.rowCount():
-                index = self.index(row=row, column=self.fieldIndex("id"))
+                index = self.index(row, self.fieldIndex("id"))
                 ids.append(self.data(index))
         return ids
 
     def get_id_by_row(self, row: int) -> Optional[int]:
         if 0 <= row < self.rowCount():
-            return self.index(row=row, column=self.fieldIndex("id"))
+            return self.index(row, self.fieldIndex("id"))
         return None

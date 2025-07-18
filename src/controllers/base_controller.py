@@ -24,4 +24,10 @@ class BaseController:
     def __init__(self, service: Service_Type, table_model: Model_Type):
         self.table_model = table_model
         self.service = service
-        self.signals = ControllerSignals()
+        self.controller_signals = ControllerSignals()
+
+    def refresh_data(self):
+        self.table_model.select()
+        self.controller_signals.info.emit(
+            f"Data '{self.table_model.tableName()}' has been refreshed."
+        )

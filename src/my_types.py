@@ -61,4 +61,4 @@ class ControllerSignals(QObject):
     error = pyqtSignal(str)
     info = pyqtSignal(str)
     warning = pyqtSignal(str)
-    finished = pyqtSignal(str)
+    success = pyqtSignal()

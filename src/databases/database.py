@@ -2,7 +2,7 @@
 import os
 from PyQt6.QtSql import QSqlDatabase, QSqlQuery
 
-from src.databases.db_sqls import SQLs
+from src.databases import db_sqls as SQLs
 from src import my_constants as constants
 
 
@@ -13,7 +13,7 @@ def initialize_database():
         db = QSqlDatabase.addDatabase("QSQLITE", constants.DB_CONNECTION)
 
     os.makedirs(constants.DB_CONTAINER_PATH, exist_ok=True)
-    db_path = os.path.abspath(constants.DB_CONTAINER_PATH, "db.db")
+    db_path = os.path.abspath(os.path.join(constants.DB_CONTAINER_PATH, "db.db"))
     db.setDatabaseName(db_path)
     if not db.open():
         print(os.path.abspath(db_path))
