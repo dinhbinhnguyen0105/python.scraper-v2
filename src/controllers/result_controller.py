@@ -1,7 +1,6 @@
 # src/controllers/result_controller.py
-from PyQt6.QtWidgets import QWidget
-from typing import TypeAlias, Union, Any, List
-from src.my_types import Result_Type
+import webbrowser
+from typing import List
 from src.models.result_model import Result_Model
 from src.services.result_service import Result_Service
 from src.controllers.base_controller import BaseController
@@ -10,6 +9,18 @@ from src.controllers.base_controller import BaseController
 class Result_Controller(BaseController):
     def __init__(self, table_model: Result_Model):
         super().__init__(service=Result_Service(), table_model=table_model)
+
+    def handle_open_browser(self, url_string: str):
+        if not (url_string.startswith("http://") or url_string.startswith("https://")):
+            return
+        try:
+            webbrowser.open_new_tab(url_string)
+        except webbrowser.Error as e:
+            self.controller_signals.error(
+                f"[Browser Error] Couldn't open the browser: {e}\nPlease check your default browser settings."
+            )
+        except Exception as e:
+            self.controller_signals.error(f"[Unknown Error] An error occurred: {e}.")
 
     def delete(self, ids_to_delete: List[int]) -> bool:
         try:

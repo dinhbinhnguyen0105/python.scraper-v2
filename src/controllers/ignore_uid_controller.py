@@ -1,13 +1,12 @@
 # src/controllers/ignore_uid_controller.py
-from PyQt6.QtWidgets import QWidget
 from typing import TypeAlias, Union, Any, List
-from src.my_types import Result_Type
+from src.my_types import IgnoreUID_Type
 from src.models.ignore_uid_model import IgnoreUID_Model
 from src.services.ignore_uid_service import IgnoreUID_Service
 from src.controllers.base_controller import BaseController
 
 
-class Result_Controller(BaseController):
+class IgnoreUID_Controller(BaseController):
 
     def __init__(self, table_model: IgnoreUID_Model):
         super().__init__(service=IgnoreUID_Service(), table_model=table_model)
