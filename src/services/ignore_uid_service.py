@@ -7,10 +7,9 @@ from src.my_constants import DB_CONNECTION, TABLE_IGNORE_UID
 
 class IgnoreUID_Service(BaseService):
     TABLE_NAME = TABLE_IGNORE_UID
-    CONNECTION_NAME = DB_CONNECTION
 
-    def __init__(self):
-        super().__init__(self.CONNECTION_NAME, self.TABLE_NAME)
+    def __init__(self, connection_name: str = DB_CONNECTION):
+        super().__init__(connection_name, self.TABLE_NAME)
 
     def create(self, payload: IgnoreUID_Type) -> Optional[int]:
         return super().create(payload)

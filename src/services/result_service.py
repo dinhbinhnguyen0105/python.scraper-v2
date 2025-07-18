@@ -7,10 +7,9 @@ from src.my_constants import DB_CONNECTION, TABLE_RESULTS
 
 class Result_Service(BaseService):
     TABLE_NAME = TABLE_RESULTS
-    CONNECTION_NAME = DB_CONNECTION
 
-    def __init__(self):
-        super().__init__(self.CONNECTION_NAME, self.TABLE_NAME)
+    def __init__(self, connection_name: str = DB_CONNECTION):
+        super().__init__(connection_name, self.TABLE_NAME)
 
     def create(self, payload: Result_Type) -> Optional[int]:
         return super().create(payload)

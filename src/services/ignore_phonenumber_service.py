@@ -8,12 +8,9 @@ from src.my_constants import DB_CONNECTION, TABLE_IGNORE_PHONE_NUMBER
 
 class IgnorePhoneNumber_Service(BaseService):
     CONNECTION_NAME = DB_CONNECTION
-    TABLE_NAME = TABLE_IGNORE_PHONE_NUMBER
 
-    def __init__(self):
-        super().__init__(
-            connection_name=self.CONNECTION_NAME, table_name=self.TABLE_NAME
-        )
+    def __init__(self, connection_name: str = DB_CONNECTION):
+        super().__init__(connection_name, self.TABLE_NAME)
 
     def create(self, payload: IgnorePhoneNumber_Type) -> Optional[int]:
         return super().create(payload)

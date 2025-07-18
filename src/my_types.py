@@ -1,7 +1,7 @@
 # src/my_types.py
 from PyQt6.QtCore import pyqtSignal, QObject
 from dataclasses import dataclass
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 
 @dataclass
@@ -57,8 +57,29 @@ class Result_Type:
         )
 
 
+@dataclass
+class TaskInfo:
+    action_name: str
+    object_name: str
+    dir_name: str
+    user_data_dir: str
+    headless: str
+    target_keywords: List[str]
+    ignore_keywords: List[str]
+    post_num: int
+
+
 class ControllerSignals(QObject):
     error = pyqtSignal(str)
     info = pyqtSignal(str)
     warning = pyqtSignal(str)
     success = pyqtSignal()
+
+
+class WorkerSignals(QObject):
+    main_progress_signal = pyqtSignal(str, int, int)
+    sub_progress_signal = pyqtSignal(str, int, int)
+    error_signal = pyqtSignal(TaskInfo, int, str)  # task_info, retry_num, err_msg
+    finished_signal = pyqtSignal(TaskInfo, int)  # task_info, retry_num
+    info_signal = pyqtSignal(str)
+    data_signal = pyqtSignal(str, list)

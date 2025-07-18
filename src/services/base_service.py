@@ -156,6 +156,9 @@ class BaseService(metaclass=EnforceAttributeMeta):
             self._initialize_database_connection()
         return self._query
 
+    def remove_database(self):
+        QSqlDatabase.removeDatabase(self._connection_name)
+
     def create(self, payload: Any) -> Optional[int]:
         data_dict = asdict(payload)
         fields = list(data_dict.keys())
