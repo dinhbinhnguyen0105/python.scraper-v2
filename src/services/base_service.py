@@ -1,6 +1,7 @@
 # src/services/base_service.py
 from typing import List, Any, Dict, Optional
 from contextlib import contextmanager
+from dataclasses import asdict
 from PyQt6.QtSql import QSqlQuery, QSqlDatabase
 
 from src import my_constants as constants
@@ -23,9 +24,26 @@ def transaction(db: QSqlDatabase):
         raise
 
 
-class BaseSerivce:
-    def __init__(self, connection_name: str):
+class EnforceAttributeMeta(type):
+    def __new__(mcs, name, bases, namespace):
+        table_name_attribute = "TABLE_NAME"
+        connection_name_attribute = "CONNECTION_NAME"
+        if name != "BaseService":
+            if table_name_attribute not in namespace:
+                raise TypeError(
+                    f"Class {name} must define a class attribute {table_name_attribute}"
+                )
+            if connection_name_attribute not in namespace:
+                raise TypeError(
+                    f"Class {name} must define a class attribute {connection_name_attribute}"
+                )
+        return super().__new__(mcs, name, bases, namespace)
+
+
+class BaseService(metaclass=EnforceAttributeMeta):
+    def __init__(self, connection_name: str, table_name: str):
         self._connection_name = connection_name
+        self._table_name = table_name
         self._db: Optional[QSqlDatabase] = None
         self._query: Optional[QSqlQuery] = None
         self._initialize_database_connection()
@@ -137,3 +155,62 @@ class BaseSerivce:
             )
             self._initialize_database_connection()
         return self._query
+
+    def create(self, payload: Any) -> Optional[int]:
+        data_dict = asdict(payload)
+        fields = list(data_dict.keys())
+        values = list(data_dict.values())
+        columns = ", ".join(fields)
+        placeholders = ", ".join([f":{field}" for field in fields])
+
+        sql_query = (
+            f"INSERT INTO {self._table_name} ({columns}) VALUES ({placeholders})"
+        )
+        params = data_dict
+
+        with transaction(self.get_database()):
+            if self.execute_query(sql_query=sql_query, params=params):
+                return self.get_last_insert_id()
+            else:
+                print(
+                    f"Failed to create new record in '{self._table_name}' for payload: {payload}"
+                )
+                return None
+
+    def read(self, record_id: Any, id_field: str = "id") -> Optional[Dict[str, Any]]:
+        sql_query = f"SELECT * FROM {self._table_name} WHERE {id_field} = :id"
+        params = {"id": record_id}
+        return self.fetch_one(sql_query, params)
+
+    def read_all(
+        self, where: Optional[str] = None, params: Optional[Dict[str, Any]] = None
+    ) -> List[Dict[str, Any]]:
+        sql_query = f"SELECT * FROM {self._table_name}"
+        if where:
+            sql_query += f" WHERE {where}"
+        return self.fetch_all(sql_query, params)
+
+    def delete(self, record_id: Any, id_field: str = "id") -> bool:
+        sql_query = f"DELETE FROM {self._table_name} WHERE {id_field} = :id"
+        params = {"id": record_id}
+        with transaction(self.get_database()):
+            return self.execute_query(sql_query, params)
+
+    def delete_multiple(self, ids: List[Any], id_field: str = "id") -> bool:
+        if not ids:
+            return False
+        placeholders = ", ".join([f":id{i}" for i in range(len(ids))])
+        sql_query = (
+            f"DELETE FROM {self._table_name} WHERE {id_field} IN ({placeholders})"
+        )
+        params = {f"id{i}": id_val for i, id_val in enumerate(ids)}
+        with transaction(self.get_database()):
+            return self.execute_query(sql_query, params)
+
+    def update(self, payload: Any, id_field: str = "id") -> bool:
+        data_dict = asdict(payload)
+        set_clause = ", ".join([f"{field} = :{field}" for field in data_dict.keys()])
+        sql_query = f"UPDATE {self._table_name} SET {set_clause} WHERE {id_field} = :id"
+        params = {**data_dict, "id": payload.id}
+        with transaction(self.get_database()):
+            return self.execute_query(sql_query, params)
