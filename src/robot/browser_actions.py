@@ -1,15 +1,17 @@
+import re
 from time import sleep
 from datetime import datetime
 from typing import Dict, Any
+from phonenumbers import PhoneNumberMatcher
 from PyQt6.QtCore import QObject, pyqtSignal
 from playwright.sync_api import Page, TimeoutError as PlaywrightTimeoutError, Locator
-import re
-from phonenumbers import PhoneNumberMatcher
-from src.my_types import TaskInfo, WorkerSignals
+
 from src.robot import selectors
+from src.my_types import TaskInfo, WorkerSignals
 from src.services.result_service import Result_Service
 from src.services.ignore_phonenumber_service import IgnorePhoneNumber_Service
 from src.services.ignore_uid_service import IgnoreUID_Service
+from src.my_constants import LAUNCHING, SCRAPING
 
 
 def on_launching(
@@ -22,5 +24,5 @@ def on_launching(
 
 
 ACTION_MAP = {
-    "launch": on_launching,
+    LAUNCHING: on_launching,
 }

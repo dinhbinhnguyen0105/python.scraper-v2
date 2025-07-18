@@ -27,16 +27,16 @@ def transaction(db: QSqlDatabase):
 class EnforceAttributeMeta(type):
     def __new__(mcs, name, bases, namespace):
         table_name_attribute = "TABLE_NAME"
-        connection_name_attribute = "CONNECTION_NAME"
+        # connection_name_attribute = "CONNECTION_NAME"
         if name != "BaseService":
             if table_name_attribute not in namespace:
                 raise TypeError(
                     f"Class {name} must define a class attribute {table_name_attribute}"
                 )
-            if connection_name_attribute not in namespace:
-                raise TypeError(
-                    f"Class {name} must define a class attribute {connection_name_attribute}"
-                )
+            # if connection_name_attribute not in namespace:
+            #     raise TypeError(
+            #         f"Class {name} must define a class attribute {connection_name_attribute}"
+            #     )
         return super().__new__(mcs, name, bases, namespace)
 
 
@@ -50,24 +50,31 @@ class BaseService(metaclass=EnforceAttributeMeta):
 
     def _initialize_database_connection(self):
         if not QSqlDatabase.contains(self._connection_name):
-            error_message = (
-                f"Database connection '{self._connection_name}' does not exist. "
-                f"Please add it using QSqlDatabase.addDatabase() before initializing service."
-            )
-            raise ConnectionError(error_message)
-
-        self._db = QSqlDatabase.database(self._connection_name)
-        if not self._db.isValid():
-            error_message = f"Database connection '{self._connection_name}' is invalid."
-            raise ConnectionError(error_message)
-        if not self._db.isOpen():
-            error_message = (
-                f"Failed to open database connection '{self._connection_name}': "
-                f"{self._db.lastError().text()}"
-            )
-            raise ConnectionError(error_message)
+            db = QSqlDatabase.addDatabase("QSQLITE", self._connection_name)
+            db.setDatabaseName(
+                constants.DB_CONTAINER_PATH + "/db.db"
+            )  # hoặc đường dẫn phù hợp
+            if not db.open():
+                error_message = (
+                    f"Failed to open database connection '{self._connection_name}': "
+                    f"{db.lastError().text()}"
+                )
+                raise ConnectionError(error_message)
+            self._db = db
         else:
-            print(f"Database connection '{self._connection_name}' opened successfully.")
+            self._db = QSqlDatabase.database(self._connection_name)
+            if not self._db.isOpen():
+                if not self._db.open():
+                    error_message = (
+                        f"Failed to open database connection '{self._connection_name}': "
+                        f"{self._db.lastError().text()}"
+                    )
+                    raise ConnectionError(error_message)
+        if not self._db.isValid():
+            raise ConnectionError(
+                f"Database connection '{self._connection_name}' is invalid."
+            )
+        self._query = QSqlQuery(self._db)
 
     def execute_query(
         self, sql_query: str, params: Optional[Dict[str, Any]] = None

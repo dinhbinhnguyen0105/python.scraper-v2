@@ -80,6 +80,10 @@ class WorkerSignals(QObject):
     main_progress_signal = pyqtSignal(str, int, int)
     sub_progress_signal = pyqtSignal(str, int, int)
     error_signal = pyqtSignal(TaskInfo, int, str)  # task_info, retry_num, err_msg
-    finished_signal = pyqtSignal(TaskInfo, int)  # task_info, retry_num
+    succeeded_signal = pyqtSignal(
+        TaskInfo, int, str
+    )  # task_info, retry_num, Optional[connection_name]
+    # finished_signal = pyqtSignal()
     info_signal = pyqtSignal(str)
     data_signal = pyqtSignal(str, list)
+    cleanup_signal = pyqtSignal(str)

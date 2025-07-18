@@ -21,11 +21,11 @@ class BrowserWorker(QRunnable):
         self.setAutoDelete(True)
 
     def run(self):
+        connection_name = f"worker_{uuid4()}"
         try:
             action_function = ACTION_MAP.get(self.task_info.action_name, None)
             if not action_function:
                 return False
-            connection_name = f"worker_{uuid4()}"
             result_service = Result_Service(connection_name=connection_name)
             ignore_phonenumber_service = IgnorePhoneNumber_Service(
                 connection_name=connection_name
@@ -59,8 +59,7 @@ class BrowserWorker(QRunnable):
                 self.task_info, self.retry_num, str(e)
             )
         finally:
-            result_service.remove_database()
-            ignore_phonenumber_service.remove_database()
-            ignore_uid_service.remove_database()
-            self.worker_signals.finished_signal.emit(self.task_info, self.retry_num)
-            return
+            self.worker_signals.succeeded_signal.emit(
+                self.task_info, self.retry_num, connection_name
+            )
+            # self.worker_signals.cleanup_signal.emit(connection_name)

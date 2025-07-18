@@ -3,6 +3,7 @@ import json
 from collections import deque
 from typing import Any, List, Dict
 from PyQt6.QtCore import QThreadPool, QObject, pyqtSignal, pyqtSlot
+from PyQt6.QtSql import QSqlDatabase
 
 from src.my_types import TaskInfo, WorkerSignals
 from src.robot.browser_worker import BrowserWorker
@@ -10,7 +11,7 @@ from src.robot.browser_worker import BrowserWorker
 
 class RobotManager(QObject):
     def __init__(self, parent=None):
-        super(RobotManager).__init__(parent)
+        super(RobotManager, self).__init__(parent)
         self.threadpool = QThreadPool.globalInstance()
         self.pending_tasks = deque()
         self.robot_manager_signals = WorkerSignals()
@@ -45,7 +46,7 @@ class RobotManager(QObject):
         ):
             task_info, retry_num = self.pending_tasks.popleft()
             worker = BrowserWorker(task_info=task_info, retry_num=retry_num)
-            worker.worker_signals.finished_signal.connect(self.on_worker_finished)
+            worker.worker_signals.succeeded_signal.connect(self.on_worker_finished)
             worker.worker_signals.error_signal.connect(self.on_worker_error)
             worker.worker_signals.main_progress_signal.connect(
                 self.on_worker_main_progress
@@ -54,7 +55,8 @@ class RobotManager(QObject):
                 self.on_worker_sub_progress
             )
             worker.worker_signals.info_signal.connect(self.on_worker_message)
-            worker.worker_signals.data_signal.connect(self.on_worker_data)
+            worker.worker_signals.cleanup_signal.connect(self.cleanup_connection)
+            # worker.worker_signals.data_signal.connect(self.on_worker_data)
             self.task_in_progress[id(worker)] = (task_info, retry_num, worker)
 
             self.threadpool.start(worker)
@@ -81,7 +83,8 @@ class RobotManager(QObject):
         )
         self.try_start_tasks()
         if self.tasks_succeeded_num + self.tasks_failed_num == self.total_tasks_initial:
-            self.robot_manager_signals.finished_signal.emit()
+            self.robot_manager_signals.succeeded_signal.emit(task_info, retry_num, "")
+            # self.robot_manager_signals.finished_signal.emit()
 
     @pyqtSlot(TaskInfo, int, str)
     def on_worker_error(self, task_info: TaskInfo, retry_num: int, message: str):
@@ -119,3 +122,7 @@ class RobotManager(QObject):
     @pyqtSlot(str)
     def on_worker_message(self, msg: str):
         self.robot_manager_signals.info_signal.emit(msg)
+
+    @pyqtSlot(str)
+    def cleanup_connection(self, connection_name):
+        QSqlDatabase.removeDatabase(connection_name)

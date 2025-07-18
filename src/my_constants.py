@@ -11,3 +11,6 @@ DATA_TABLES = {
 
 DB_CONNECTION = "DB_CONNECTION"
 DB_CONTAINER_PATH = "./repositories/db"
+
+SCRAPING = "scraping"
+LAUNCHING = "launching"
