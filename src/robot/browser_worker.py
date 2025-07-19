@@ -22,10 +22,10 @@ class BrowserWorker(QRunnable):
 
     def run(self):
         connection_name = f"worker_{uuid4()}"
+        action_function = ACTION_MAP.get(self.task_info.action_name, None)
+        if not action_function:
+            return False
         try:
-            action_function = ACTION_MAP.get(self.task_info.action_name, None)
-            if not action_function:
-                return False
             result_service = Result_Service(connection_name=connection_name)
             ignore_phonenumber_service = IgnorePhoneNumber_Service(
                 connection_name=connection_name

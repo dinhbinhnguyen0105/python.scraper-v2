@@ -7,6 +7,8 @@ from src.robot.robot_manager import RobotManager
 
 
 class RobotController(QObject):
+    bot_finished_signal = pyqtSignal()
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.robot_controller_signals = WorkerSignals()
@@ -39,7 +41,7 @@ class RobotController(QObject):
     ):
         settings_max_thread = len(user_data_dir_list)
         settings_max_retries = 3
-        post_num = 300
+        post_num = 200
 
         tasks = []
         for index, user_data_dir in enumerate(user_data_dir_list):

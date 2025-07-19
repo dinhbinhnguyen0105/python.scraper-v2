@@ -26,7 +26,9 @@ def on_launching(
 def on_scraper(
     page: Page, task_info: TaskInfo, signals: WorkerSignals, services: Dict[str, Any]
 ):
-    sleep(5)
+    signals.info_signal.emit(f"{task_info.dir_name} Launching ...")
+    page.wait_for_event("close", timeout=0)
+    signals.info_signal.emit(f"{task_info.dir_name} Closed!")
     return True
 
 

@@ -128,8 +128,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             user_data_dir_list=user_data_dir_list,
             target_keywords=target_group_keywords,
             ignore_keywords=ignore_group_keywords,
-            headless=True,
+            headless=False,
         )
+        self.runbot_btn.setDisabled(True)
+        self.runbot_btn.setText("Running ..")
 
     def on_log_message(self, msg: str):
         print("[Info] ", msg)
