@@ -23,6 +23,14 @@ def on_launching(
     return True
 
 
+def on_scraper(
+    page: Page, task_info: TaskInfo, signals: WorkerSignals, services: Dict[str, Any]
+):
+    sleep(5)
+    return True
+
+
 ACTION_MAP = {
     LAUNCHING: on_launching,
+    SCRAPING: on_scraper,
 }

@@ -40,6 +40,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.data_combobox.currentIndexChanged.connect(self.on_data_combobox_changed)
         self.data_open_btn.clicked.connect(self.on_data_open)
         self.thread_num_input.valueChanged.connect(self.handle_change_thread)
+        self.runbot_btn.clicked.connect(self.handle_run_bot)
 
     def on_data_open(self):
         data_dialog = Data_Dialog(self)
@@ -101,6 +102,33 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         )
         self.robot_controller.robot_controller_signals.succeeded_signal.connect(
             lambda: current_widget.launch_browser_btn.setDisabled(False)
+        )
+
+    def handle_run_bot(self):
+        user_data_dir_list = [
+            thread_widget.select_udd_input.text()
+            for thread_widget in self.list_thread_widget
+        ]
+        object_name_list = [
+            thread_widget.objectName() for thread_widget in self.list_thread_widget
+        ]
+        target_group_keywords = [
+            keyword.strip()
+            for keyword in self.group_key_input.text().split(",")
+            if keyword.strip() != ""
+        ]
+        ignore_group_keywords = [
+            keyword.strip()
+            for keyword in self.ignore_group_key_input.text().split(",")
+            if keyword.strip() != ""
+        ]
+        self.robot_controller.run_task(
+            action_name=SCRAPING,
+            object_name_list=object_name_list,
+            user_data_dir_list=user_data_dir_list,
+            target_keywords=target_group_keywords,
+            ignore_keywords=ignore_group_keywords,
+            headless=True,
         )
 
     def on_log_message(self, msg: str):
