@@ -1,4 +1,5 @@
 # src/services/base_service.py
+from datetime import datetime
 from typing import List, Any, Dict, Optional
 from contextlib import contextmanager
 from dataclasses import asdict
@@ -168,15 +169,28 @@ class BaseService(metaclass=EnforceAttributeMeta):
 
     def create(self, payload: Any) -> Optional[int]:
         data_dict = asdict(payload)
-        fields = list(data_dict.keys())
-        values = list(data_dict.values())
+
+        filtered_data_dict = {}
+
+        for key, value in data_dict.items():
+            if key == "id" and value == None:
+                continue
+            elif key == "created_at" and value == None:
+                continue
+            elif key == "updated_at":
+                filtered_data_dict[key] = str(datetime.now())
+            else:
+                filtered_data_dict[key] = value
+
+        fields = list(filtered_data_dict.keys())
+
         columns = ", ".join(fields)
         placeholders = ", ".join([f":{field}" for field in fields])
 
         sql_query = (
             f"INSERT INTO {self._table_name} ({columns}) VALUES ({placeholders})"
         )
-        params = data_dict
+        params = filtered_data_dict
 
         with transaction(self.get_database()):
             if self.execute_query(sql_query=sql_query, params=params):
@@ -185,6 +199,7 @@ class BaseService(metaclass=EnforceAttributeMeta):
                 print(
                     f"Failed to create new record in '{self._table_name}' for payload: {payload}"
                 )
+                # in ra lỗi ở đây
                 return None
 
     def read(self, record_id: Any, id_field: str = "id") -> Optional[Dict[str, Any]]:
@@ -224,3 +239,9 @@ class BaseService(metaclass=EnforceAttributeMeta):
         params = {**data_dict, "id": payload.id}
         with transaction(self.get_database()):
             return self.execute_query(sql_query, params)
+
+    def is_existed(self, field: str, value: str) -> bool:
+        sql_query = f"SELECT 1 FROM {self._table_name} WHERE {field} = :value LIMIT 1"
+        params = {"value": value}
+        result = self.fetch_one(sql_query, params)
+        return result is not None

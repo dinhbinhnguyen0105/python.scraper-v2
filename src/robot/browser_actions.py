@@ -7,7 +7,13 @@ from PyQt6.QtCore import QObject, pyqtSignal
 from playwright.sync_api import Page, TimeoutError as PlaywrightTimeoutError, Locator
 
 from src.robot import selectors
-from src.my_types import TaskInfo, WorkerSignals
+from src.my_types import (
+    TaskInfo,
+    WorkerSignals,
+    IgnoreUID_Type,
+    IgnorePhoneNumber_Type,
+    Result_Type,
+)
 from src.services.result_service import Result_Service
 from src.services.ignore_phonenumber_service import IgnorePhoneNumber_Service
 from src.services.ignore_uid_service import IgnoreUID_Service
@@ -48,7 +54,7 @@ def on_scraper(
             elm = current_element.locator(selector).first
         return None
 
-    def get_groups():
+    def get_groups(max_loading_attempts=30):
         try:
             page.goto("https://www.facebook.com/groups/feed/", timeout=60_000)
             signals.info_signal.emit("Successfully navigated to general groups page.")
@@ -67,7 +73,6 @@ def on_scraper(
         )
 
         loading_attempt = 0
-        max_loading_attempts = 30
         while (
             sidebar_locator.first.locator(selectors.S_LOADING).count()
             and loading_attempt < max_loading_attempts
@@ -174,46 +179,54 @@ def on_scraper(
                 )
 
                 try:
-                    article_user_locator.first.wait_for(
-                        state="attached", timeout=1_000
-                    )
+                    article_user_locator.first.wait_for(state="attached", timeout=1_000)
                     article_user_locator.scroll_into_view_if_needed()
                     article_user_locator.highlight()
-                    article_user_url_locator = article_user_locator.first.locator(
-                        "a"
-                    )
+                    article_user_url_locator = article_user_locator.first.locator("a")
                     article_user_url_locator.first.hover()
                     sleep(0.5)
                     user_url = article_user_url_locator.first.get_attribute(
                         "href",
                         timeout=1_000,
                     ).split("?")[0]
-                    user_url = (
-                        user_url[0:-1] if user_url.endswith("/") else user_url
-                    )
-                    # TODO request data
+                    user_url = user_url[0:-1] if user_url.endswith("/") else user_url
+
                     popup_locators.first.hover()
                     sleep(0.5)
                     uid = user_url.split("/")[-1]
-                    services["uid"].
-                    if IgnoreUIDService.is_field_value_exists(uid):
-                        article_locators.first.evaluate("elm => elm.remove()")
-                        signals.sub_progress_signal.emit(
-                            task_info.object_name, task_info.post_num, post_index
-                        )
-                        post_index += 1
-                        if post_index > task_info.post_num:
-                            break
-                        continue
+                    _is_uid_existed = services["uid"].is_existed("value", uid)
+                    if _is_uid_existed:
+                        # article_locators.first.evaluate("elm => elm.remove()")
+                        # signals.sub_progress_signal.emit(
+                        #     task_info.object_name, task_info.post_num, post_index
+                        # )
+                        # post_index += 1
+                        # if post_index > task_info.post_num:
+                        #     break
+                        # continue
+                        print(f"uid: {_is_uid_existed} existed.")
                     else:
-                        IgnoreUIDService.create({"value": uid})
+                        print(f"uid: {_is_uid_existed} not existed.")
+                        services["uid"].create(
+                            IgnoreUID_Type(
+                                id=None,
+                                value=uid,
+                                created_at=None,
+                            )
+                        )
 
-                    post["user_url"] = user_url
+                    # post["user_url"] = user_url
                 except PlaywrightTimeoutError:
                     pass
+
         except Exception as e:
             print(e)
             return
+
+    list_group_url = get_groups(1)
+    for group_url in list_group_url:
+        scraping(group_url)
+        return
 
 
 ACTION_MAP = {

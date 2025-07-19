@@ -1,14 +1,14 @@
 # src/my_types.py
 from PyQt6.QtCore import pyqtSignal, QObject
 from dataclasses import dataclass
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
 
 @dataclass
 class IgnoreUID_Type:
-    id: int
+    id: Optional[int]
     value: str
-    created_at: str
+    created_at: Optional[str]
 
     @staticmethod
     def from_db_row(row_data: Dict[str, Any]) -> "IgnoreUID_Type":
@@ -21,9 +21,9 @@ class IgnoreUID_Type:
 
 @dataclass
 class IgnorePhoneNumber_Type:
-    id: int
+    id: Optional[int]
     value: str
-    created_at: str
+    created_at: Optional[str]
 
     @staticmethod
     def from_db_row(row_data: Dict[str, Any]) -> "IgnorePhoneNumber_Type":
@@ -36,13 +36,13 @@ class IgnorePhoneNumber_Type:
 
 @dataclass
 class Result_Type:
-    id: int
+    id: Optional[int]
     article_url: str
     article: str
     author_url: str
     author: str
     contact: str
-    created_at: str
+    created_at: Optional[str]
 
     @staticmethod
     def from_db_row(row_data: Dict[str, Any]) -> "Result_Type":
