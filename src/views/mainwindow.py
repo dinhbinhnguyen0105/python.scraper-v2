@@ -62,6 +62,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 thread_container_widget.set_title(
                     f"Thread {len(self.list_thread_widget ) + 1}:"
                 )
+                thread_container_widget.select_udd_input.setText(
+                    "/Users/ndb/Dev/python/scraper.data/browsers/100089985627418_DinhBinh_Nguyen"
+                )
                 thread_container_widget.launch_browser_btn.clicked.connect(
                     lambda: self.handle_launch_browser(thread_container_widget)
                 )

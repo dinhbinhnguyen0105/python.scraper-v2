@@ -41,7 +41,7 @@ class RobotController(QObject):
     ):
         settings_max_thread = len(user_data_dir_list)
         settings_max_retries = 3
-        post_num = 200
+        post_num = 10
 
         tasks = []
         for index, user_data_dir in enumerate(user_data_dir_list):

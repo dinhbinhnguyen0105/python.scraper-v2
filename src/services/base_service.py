@@ -91,7 +91,7 @@ class BaseService(metaclass=EnforceAttributeMeta):
         if params:
             self._query.prepare(sql_query)
             for key, value in params.items():
-                self._query.bindValue(key, value)
+                self._query.bindValue(f":{key}", value)
             if not self._query.exec():
                 print(
                     f"Query execution failed for connection '{self._connection_name}': "
@@ -177,13 +177,12 @@ class BaseService(metaclass=EnforceAttributeMeta):
                 continue
             elif key == "created_at" and value == None:
                 continue
-            elif key == "updated_at":
+            if key == "updated_at":
                 filtered_data_dict[key] = str(datetime.now())
             else:
                 filtered_data_dict[key] = value
 
         fields = list(filtered_data_dict.keys())
-
         columns = ", ".join(fields)
         placeholders = ", ".join([f":{field}" for field in fields])
 

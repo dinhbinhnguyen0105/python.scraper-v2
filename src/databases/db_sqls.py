@@ -18,10 +18,10 @@ CREATE TABLE IF NOT EXISTS {constants.TABLE_IGNORE_PHONE_NUMBER} (
 RESULT = f"""
 CREATE TABLE IF NOT EXISTS {constants.TABLE_RESULTS} (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    article TEXT,
     article_url TEXT,
-    author TEXT,
+    article_content TEXT,
     author_url TEXT,
+    author_name TEXT,
     contact TEXT,
     created_at TEXT DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now'))
 )

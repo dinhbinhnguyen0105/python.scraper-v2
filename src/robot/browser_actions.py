@@ -1,7 +1,7 @@
-import re
+import re, traceback
 from time import sleep
 from datetime import datetime
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from phonenumbers import PhoneNumberMatcher
 from PyQt6.QtCore import QObject, pyqtSignal
 from playwright.sync_api import Page, TimeoutError as PlaywrightTimeoutError, Locator
@@ -105,11 +105,19 @@ def on_scraper(
         group_locators = sidebar_locator.first.locator(
             "a[href^='https://www.facebook.com/groups/']"
         )
-        group_urls = [
-            href
-            for group_locator in group_locators.all()
-            if (href := group_locator.get_attribute("href")) is not None
-        ]
+        group_urls = []
+        for i in range(group_locators.count()):
+            _href = group_locators.nth(i).get_attribute("href")
+            _textcontent = group_locators.nth(i).text_content().lower()
+            if _href:
+                if task_info.target_keywords:
+                    for target_keyword in task_info.target_keywords:
+                        if target_keyword in _textcontent:
+                            group_urls.append(_href)
+                            break
+                else:
+                    group_urls.append(_href)
+
         signals.info_signal.emit(f"Found {len(group_urls)} group URLs.")
         if not group_urls:
             signals.info_signal.emit(
@@ -119,8 +127,98 @@ def on_scraper(
         return group_urls
 
     def scraping(url: str):
+        def get_author_info(author_locator: Locator) -> Optional[Dict[str, str]]:
+            try:
+                author_locator.first.wait_for(state="attached", timeout=10_000)
+                author_locator.scroll_into_view_if_needed()
+                author_locator.highlight()
+                article_user_url_locator = author_locator.first.locator("a")
+                article_user_url_locator.first.hover()
+                sleep(0.5)
+                author_url = article_user_url_locator.first.get_attribute(
+                    "href",
+                    timeout=1_000,
+                ).split("?")[0]
+                author_name = article_user_url_locator.first.text_content(
+                    timeout=10_000
+                )
+                author_url: str = (
+                    author_url[0:-1] if author_url.endswith("/") else author_url
+                )
+
+                uid = author_url.split("/")[-1]
+                _is_uid_existed = services["uid"].is_existed("value", uid)
+                if not _is_uid_existed:
+                    services["uid"].create(
+                        IgnoreUID_Type(
+                            id=None,
+                            value=uid,
+                            created_at=None,
+                        )
+                    )
+                    if not author_url.startswith("http"):
+                        author_url = "https://www.facebook.com/" + author_url
+                    return {
+                        "author_url": author_url,
+                        "author_name": author_name,
+                    }
+                else:
+                    print(f"Ignore UID: {uid}")
+                    return False
+            except Exception as e:
+                return False
+
+        def get_article_url(article_info_locator: Locator) -> Optional[str]:
+            try:
+                article_info_locator.first.wait_for(state="attached", timeout=10_000)
+                article_info_locator.first.scroll_into_view_if_needed()
+                article_info_locator.first.highlight()
+
+                article_url_locator = article_info_locator.first.locator("a")
+                for i in range(10):
+                    article_url_locator.first.hover()
+                    sleep(1)
+                    if not article_url_locator.first.get_attribute("target"):
+                        break
+                    article_info_locator.first.hover()
+                article_url = article_url_locator.first.get_attribute("href").split(
+                    "?"
+                )[0]
+                article_url: str = (
+                    article_url[0:-1] if article_url.endswith("/") else article_url
+                )
+                return article_url
+            except Exception as e:
+                print(e)
+                return False
+
+        def get_article_content(
+            article_content_locator: Locator,
+        ) -> Optional[str]:
+            try:
+                article_content_locator.first.wait_for(state="visible", timeout=10_000)
+                article_content_locator.first.scroll_into_view_if_needed()
+                article_content_locator.first.highlight()
+                content = article_content_locator.text_content()
+                new_content = ""
+                button_locator = article_content_locator.first.locator(
+                    "div[role='button']"
+                )
+                if button_locator.count():
+                    button_locator.first.wait_for(state="attached", timeout=10_000)
+                    button_locator.first.click()
+                    for i in range(10):
+                        new_content = article_content_locator.text_content()
+                        if content != new_content:
+                            content = new_content
+                            break
+                        sleep(1)
+                return content
+            except Exception as e:
+                print(e)
+                return False
+
         page.goto(url=url, timeout=60_000)
-        # singal
         close_dialog()
         feed_locators = page.locator(selectors.S_FEED)
         try:
@@ -134,11 +232,15 @@ def on_scraper(
         try:
             post_index = 0
             while post_index < task_info.post_num:
-                post = {
-                    "user_url": "",
-                    "post_url": "",
-                    "post_content": "",
-                }
+                result = Result_Type(
+                    id=None,
+                    article_url="",
+                    article_content="",
+                    author_url="",
+                    author_name="",
+                    contact="",
+                    created_at=None,
+                )
                 article_locators = feed_locator.locator(selectors.S_ARTICLE)
                 article_locators.first.scroll_into_view_if_needed()
                 describedby_values = article_locators.first.get_attribute(
@@ -155,11 +257,11 @@ def on_scraper(
                     article_comment_id,
                 ) = describedby_values.split(" ")
 
-                popup_locators = article_locators.first.locator(
+                ellipsis_locator = article_locators.first.locator(
                     "[aria-haspopup='menu'][aria-expanded='false']"
                 )
 
-                article_user_locator = article_locators.first.locator(
+                author_locator = article_locators.first.locator(
                     f"[id='{article_user_id}']"
                 )
                 article_info_locator = article_locators.first.locator(
@@ -179,54 +281,89 @@ def on_scraper(
                 )
 
                 try:
-                    article_user_locator.first.wait_for(state="attached", timeout=1_000)
-                    article_user_locator.scroll_into_view_if_needed()
-                    article_user_locator.highlight()
-                    article_user_url_locator = article_user_locator.first.locator("a")
-                    article_user_url_locator.first.hover()
-                    sleep(0.5)
-                    user_url = article_user_url_locator.first.get_attribute(
-                        "href",
-                        timeout=1_000,
-                    ).split("?")[0]
-                    user_url = user_url[0:-1] if user_url.endswith("/") else user_url
-
-                    popup_locators.first.hover()
-                    sleep(0.5)
-                    uid = user_url.split("/")[-1]
-                    _is_uid_existed = services["uid"].is_existed("value", uid)
-                    if _is_uid_existed:
-                        # article_locators.first.evaluate("elm => elm.remove()")
-                        # signals.sub_progress_signal.emit(
-                        #     task_info.object_name, task_info.post_num, post_index
-                        # )
-                        # post_index += 1
-                        # if post_index > task_info.post_num:
-                        #     break
-                        # continue
-                        print(f"uid: {_is_uid_existed} existed.")
-                    else:
-                        print(f"uid: {_is_uid_existed} not existed.")
-                        services["uid"].create(
-                            IgnoreUID_Type(
-                                id=None,
-                                value=uid,
-                                created_at=None,
-                            )
+                    # TODO get author_info
+                    author_info = get_author_info(author_locator)
+                    if not author_info:
+                        article_locators.first.evaluate("elm => elm.remove()")
+                        signals.sub_progress_signal.emit(
+                            task_info.object_name, task_info.post_num, post_index
                         )
+                        continue
+                    result.author_url = author_info.get("author_url")
+                    result.author_name = author_info.get("author_name")
+                    ellipsis_locator.first.hover(timeout=60_000)
+                    ellipsis_locator.first.highlight()
 
-                    # post["user_url"] = user_url
-                except PlaywrightTimeoutError:
-                    pass
+                    # TODO get article_url
+                    article_info = {}
+                    article_info["article_url"] = get_article_url(article_info_locator)
+                    if not article_info["article_url"]:
+                        article_locators.first.evaluate("elm => elm.remove()")
+                        signals.sub_progress_signal.emit(
+                            task_info.object_name, task_info.post_num, post_index
+                        )
+                        continue
+
+                    # TODO get article_content
+                    article_info["content"] = get_article_content(
+                        article_message_locator
+                    )
+                    if not article_info["content"]:
+                        article_locators.first.evaluate("elm => elm.remove()")
+                        signals.sub_progress_signal.emit(
+                            task_info.object_name, task_info.post_num, post_index
+                        )
+                        continue
+
+                    # TODO get contact
+                    article_info["contact"] = ""
+                    for match in PhoneNumberMatcher(
+                        re.sub(r"\D", " ", article_info["content"]), "VN"
+                    ):
+                        article_info["contact"] = re.sub(r"\D", "", match.raw_string)
+
+                    if not services["phone_number"].is_existed(
+                        "value", article_info["contact"]
+                    ):
+                        if article_info["contact"]:
+                            services["phone_number"].create(
+                                IgnorePhoneNumber_Type(
+                                    id=None,
+                                    value=article_info["contact"],
+                                    created_at=None,
+                                )
+                            )
+                        result.article_url = article_info["article_url"]
+                        result.article_content = article_info["content"]
+                        result.contact = article_info["contact"]
+                        services["result"].create(result)
+                    else:
+                        print(f"Ignore phone number: {article_info['contact']}")
+
+                    article_locators.first.evaluate("elm => elm.remove()")
+                    signals.sub_progress_signal.emit(
+                        task_info.object_name, task_info.post_num, post_index
+                    )
+
+                    post_index += 1
+                    if post_index > task_info.post_num:
+                        break
+
+                except PlaywrightTimeoutError as e:
+                    print(e)
 
         except Exception as e:
-            print(e)
-            return
+            print(f"An error occurred: {e}")  # Prints the error message
+            # Print the full traceback
+            print("--- Traceback ---")
+            traceback.print_exc()  # This prints the traceback directly to stderr (console)
+            print("-----------------")
+            return False
 
     list_group_url = get_groups(1)
+
     for group_url in list_group_url:
         scraping(group_url)
-        return
 
 
 ACTION_MAP = {

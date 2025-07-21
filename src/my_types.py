@@ -38,9 +38,9 @@ class IgnorePhoneNumber_Type:
 class Result_Type:
     id: Optional[int]
     article_url: str
-    article: str
+    article_content: str
     author_url: str
-    author: str
+    author_name: str
     contact: str
     created_at: Optional[str]
 

@@ -55,6 +55,8 @@ class BrowserWorker(QRunnable):
         except TargetClosedError:
             return
         except Exception as e:
+            # raise Exception(e)
+            print(e)
             self.worker_signals.error_signal.emit(
                 self.task_info, self.retry_num, str(e)
             )
