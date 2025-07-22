@@ -164,7 +164,8 @@ def on_scraper(
                         "author_name": author_name,
                     }
                 else:
-                    print(f"Ignore UID: {uid}")
+                    pass
+                    # print(f"Ignore UID: {uid}")
                     return False
             except Exception as e:
                 return False
@@ -282,29 +283,7 @@ def on_scraper(
                 )
 
                 try:
-                    # TODO get author_info
-                    author_info = get_author_info(author_locator)
-                    if not author_info:
-                        article_locators.first.evaluate("elm => elm.remove()")
-                        signals.sub_progress_signal.emit(
-                            task_info.object_name, task_info.post_num, post_index
-                        )
-                        continue
-                    result.author_url = author_info.get("author_url")
-                    result.author_name = author_info.get("author_name")
-                    ellipsis_locator.first.hover(timeout=60_000)
-                    ellipsis_locator.first.highlight()
-
-                    # TODO get article_url
                     article_info = {}
-                    article_info["article_url"] = get_article_url(article_info_locator)
-                    if not article_info["article_url"]:
-                        article_locators.first.evaluate("elm => elm.remove()")
-                        signals.sub_progress_signal.emit(
-                            task_info.object_name, task_info.post_num, post_index
-                        )
-                        continue
-
                     # TODO get article_content
                     article_info["content"] = get_article_content(
                         article_message_locator
@@ -322,7 +301,16 @@ def on_scraper(
                     for match in PhoneNumberMatcher(
                         re.sub(regex_pattern, " ", article_info["content"]), "VN"
                     ):
-                        article_info["contact"] = re.sub(regex_pattern, "", match.raw_string)
+                        article_info["contact"] = re.sub(r"\D" , "", match.raw_string)
+                    
+                    # TODO get article_url
+                    article_info["article_url"] = get_article_url(article_info_locator)
+                    if not article_info["article_url"]:
+                        article_locators.first.evaluate("elm => elm.remove()")
+                        signals.sub_progress_signal.emit(
+                            task_info.object_name, task_info.post_num, post_index
+                        )
+                        continue
 
                     if not services["phone_number"].is_existed(
                         "value", article_info["contact"]
@@ -335,13 +323,30 @@ def on_scraper(
                                     created_at=None,
                                 )
                             )
-                        result.article_url = article_info["article_url"]
-                        result.article_content = article_info["content"]
-                        result.contact = article_info["contact"]
-                        services["result"].create(result)
                     else:
-                        print(f"Ignore phone number: {article_info['contact']}")
+                        continue
+                        # print(f"Ignore phone number: {article_info['contact']}")
+                    # TODO get author_info
+                    author_info = get_author_info(author_locator)
+                    if not author_info:
+                        article_locators = feed_locator.locator(selectors.S_ARTICLE)
+                        article_locators.first.evaluate("elm => elm.remove()")
+                        signals.sub_progress_signal.emit(
+                            task_info.object_name, task_info.post_num, post_index
+                        )
+                        continue
+                    result.author_url = author_info.get("author_url")
+                    result.author_name = author_info.get("author_name")
+                    result.article_url = article_info["article_url"]
+                    result.article_content = article_info["content"]
+                    result.contact = article_info["contact"]
 
+                    services["result"].create(result)
+                    print(f"New result: {result.author_name} - {result.contact}: {result.article_content[:100]} ...")
+
+                    # ellipsis_locator.first.hover(timeout=60_000)
+                    # ellipsis_locator.first.highlight()
+                    article_locators = feed_locator.locator(selectors.S_ARTICLE)
                     article_locators.first.evaluate("elm => elm.remove()")
                     signals.sub_progress_signal.emit(
                         task_info.object_name, task_info.post_num, post_index
