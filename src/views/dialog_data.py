@@ -1,5 +1,12 @@
 from typing import Union, TypeAlias, Optional, List
-from PyQt6.QtWidgets import QDialog, QMenu, QTableView
+from PyQt6.QtWidgets import (
+    QDialog,
+    QMenu,
+    QTableView,
+    QPushButton,
+    QMessageBox,
+    QFileDialog,
+)
 from PyQt6.QtCore import Qt, pyqtSlot, QModelIndex, QPoint
 from PyQt6.QtGui import QAction
 from src.ui.dialog_data_ui import Ui_Dialog_Data
@@ -24,6 +31,8 @@ class Data_Dialog(QDialog, Ui_Dialog_Data):
         self.controller: Optional[Controler_Type] = None
         self.table_name: Optional[str] = None
         self.table_model: Optional[Model_Type] = None
+        self.import_btn: Optional[QPushButton] = None
+        self.export_btn: Optional[QPushButton] = None
         self.tableView.setWordWrap(True)
         self.tableView.setTextElideMode(Qt.TextElideMode.ElideNone)
 
@@ -42,6 +51,12 @@ class Data_Dialog(QDialog, Ui_Dialog_Data):
             raise ValueError(f"Invalid table name '{self.table_name}'")
         self.table_model.select()
         self.tableView.setModel(self.table_model)
+        self.import_btn = QPushButton("Import")
+        self.export_btn = QPushButton("Export")
+        self.import_btn.clicked.connect(self.on_import_clicked)
+        self.export_btn.clicked.connect(self.on_export_clicked)
+        self.layout().addWidget(self.import_btn)
+        self.layout().addWidget(self.export_btn)
         self.config_table()
 
     def config_table(self):
@@ -88,3 +103,72 @@ class Data_Dialog(QDialog, Ui_Dialog_Data):
             self.controller.handle_open_browser(url_string)
         else:
             return
+
+    @pyqtSlot()
+    def on_import_clicked(self):
+        if not self.controller:
+            QMessageBox.warning(self, "Lỗi", "Controller chưa được khởi tạo.")
+            return
+
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Chọn file CSV để nhập",
+            "",
+            "CSV Files (*.csv);;All Files (*)",
+        )
+
+        if file_path:
+            # Controller của bạn có thuộc tính service, và service có hàm import_data_from_csv
+            if hasattr(self.controller, "service") and callable(
+                getattr(self.controller.service, "import_data_from_csv", None)
+            ):
+                success = self.controller.service.import_data_from_csv(file_path)
+                if success:
+                    QMessageBox.information(
+                        self, "Thành công", "Dữ liệu đã được nhập thành công."
+                    )
+                    self.table_model.select()  # Cập nhật lại dữ liệu hiển thị sau khi import
+                else:
+                    QMessageBox.warning(
+                        self,
+                        "Lỗi",
+                        "Có lỗi xảy ra khi nhập dữ liệu. Vui lòng kiểm tra console.",
+                    )
+            else:
+                QMessageBox.warning(
+                    self, "Lỗi", "Controller không hỗ trợ tính năng nhập dữ liệu."
+                )
+
+    @pyqtSlot()
+    def on_export_clicked(self):
+        if not self.controller:
+            QMessageBox.warning(self, "Lỗi", "Controller chưa được khởi tạo.")
+            return
+
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Lưu dữ liệu ra file CSV",
+            "",  # Thư mục mặc định, có thể để trống hoặc chỉ định
+            "CSV Files (*.csv);;All Files (*)",
+        )
+
+        if file_path:
+            # Controller của bạn có thuộc tính service, và service có hàm export_data_to_csv
+            if hasattr(self.controller, "service") and callable(
+                getattr(self.controller.service, "export_data_to_csv", None)
+            ):
+                success = self.controller.service.export_data_to_csv(file_path)
+                if success:
+                    QMessageBox.information(
+                        self, "Thành công", "Dữ liệu đã được xuất thành công."
+                    )
+                else:
+                    QMessageBox.warning(
+                        self,
+                        "Lỗi",
+                        "Có lỗi xảy ra khi xuất dữ liệu. Vui lòng kiểm tra console.",
+                    )
+            else:
+                QMessageBox.warning(
+                    self, "Lỗi", "Controller không hỗ trợ tính năng xuất dữ liệu."
+                )

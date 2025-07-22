@@ -1,4 +1,5 @@
 # src/services/base_service.py
+import csv
 from datetime import datetime
 from typing import List, Any, Dict, Optional
 from contextlib import contextmanager
@@ -28,16 +29,11 @@ def transaction(db: QSqlDatabase):
 class EnforceAttributeMeta(type):
     def __new__(mcs, name, bases, namespace):
         table_name_attribute = "TABLE_NAME"
-        # connection_name_attribute = "CONNECTION_NAME"
         if name != "BaseService":
             if table_name_attribute not in namespace:
                 raise TypeError(
                     f"Class {name} must define a class attribute {table_name_attribute}"
                 )
-            # if connection_name_attribute not in namespace:
-            #     raise TypeError(
-            #         f"Class {name} must define a class attribute {connection_name_attribute}"
-            #     )
         return super().__new__(mcs, name, bases, namespace)
 
 
@@ -244,3 +240,126 @@ class BaseService(metaclass=EnforceAttributeMeta):
         params = {"value": value}
         result = self.fetch_one(sql_query, params)
         return result is not None
+
+    def export_data_to_csv(self, file_path: str) -> bool:
+        """
+        Exports all data from the service's table to a CSV file.
+
+        Args:
+            file_path: The full path to the CSV file where data will be saved.
+
+        Returns:
+            True if export is successful, False otherwise.
+        """
+        print(f"Bắt đầu xuất dữ liệu từ '{self._table_name}' ra '{file_path}'...")
+        try:
+            # Lấy tất cả dữ liệu từ bảng
+            all_records = self.read_all()
+            if not all_records:
+                print(f"Không có dữ liệu để xuất từ '{self._table_name}'.")
+                return True  # Vẫn coi là thành công nếu không có dữ liệu để xuất
+
+            # Lấy tên các cột từ bản ghi đầu tiên (đảm bảo thứ tự)
+            # Hoặc bạn có thể tự định nghĩa headers nếu muốn kiểm soát thứ tự
+            headers = list(all_records[0].keys())
+
+            with open(file_path, "w", newline="", encoding="utf-8") as csvfile:
+                writer = csv.DictWriter(csvfile, fieldnames=headers)
+                writer.writeheader()  # Ghi tiêu đề cột
+                writer.writerows(all_records)  # Ghi tất cả các hàng dữ liệu
+
+            print(
+                f"Xuất dữ liệu thành công ra '{file_path}'. Tổng số bản ghi: {len(all_records)}"
+            )
+            return True
+        except Exception as e:
+            print(f"Lỗi khi xuất dữ liệu ra '{file_path}': {e}")
+            import traceback
+
+            traceback.print_exc()
+            return False
+
+    def import_data_from_csv(self, file_path: str) -> bool:
+        """
+        Imports data from a CSV file into the service's table.
+        It assumes the CSV headers match the table column names.
+        'id' and 'created_at' columns are handled as special cases:
+        - 'id' from CSV is ignored if the table column is AUTOINCREMENT.
+        - 'created_at' from CSV is used if present, otherwise database default is applied.
+
+        Args:
+            file_path: The full path to the CSV file to import from.
+
+        Returns:
+            True if import is successful, False otherwise.
+        """
+        print(f"Bắt đầu nhập dữ liệu từ '{file_path}' vào '{self._table_name}'...")
+        imported_count = 0
+        try:
+            with open(file_path, "r", newline="", encoding="utf-8") as csvfile:
+                reader = csv.DictReader(csvfile)
+                # Lấy tên cột thực tế từ database để so sánh và tạo câu lệnh SQL
+                db_columns_info = self.fetch_all(
+                    f"PRAGMA table_info({self._table_name})"
+                )
+                db_column_names = {col["name"] for col in db_columns_info}
+
+                for row_data in reader:
+                    payload_for_insert = {}
+                    for header, value in row_data.items():
+                        # Chỉ lấy các header (cột) có tồn tại trong database
+                        if header in db_column_names:
+                            # Bỏ qua 'id' nếu nó là AUTOINCREMENT (database sẽ tự cấp)
+                            if (
+                                header == "id"
+                                and "id" in db_column_names
+                                and "autoincrement"
+                                in [
+                                    col["name"]
+                                    for col in db_columns_info
+                                    if col["name"] == "id"
+                                ][0].lower()
+                            ):  # Cần kiểm tra kỹ hơn
+                                continue
+                            # Bỏ qua 'created_at' nếu giá trị rỗng và database có default
+                            if header == "created_at" and (
+                                value is None or value == ""
+                            ):
+                                continue  # Database sẽ tự cấp default
+
+                            payload_for_insert[header] = (
+                                value if value != "" else None
+                            )  # Xử lý chuỗi rỗng thành None
+
+                    if not payload_for_insert:
+                        print(
+                            f"Cảnh báo: Hàng rỗng hoặc không có dữ liệu hợp lệ: {row_data}"
+                        )
+                        continue
+
+                    columns = ", ".join(payload_for_insert.keys())
+                    placeholders = ", ".join(
+                        [f":{field}" for field in payload_for_insert.keys()]
+                    )
+                    sql_query = f"INSERT INTO {self._table_name} ({columns}) VALUES ({placeholders})"
+
+                    with transaction(self.get_database()):
+                        if self.execute_query(
+                            sql_query=sql_query, params=payload_for_insert
+                        ):
+                            imported_count += 1
+                        else:
+                            print(f"Lỗi khi nhập bản ghi: {row_data}. Bỏ qua.")
+            print(
+                f"Nhập dữ liệu thành công từ '{file_path}'. Tổng số bản ghi được nhập: {imported_count}"
+            )
+            return True
+        except FileNotFoundError:
+            print(f"Lỗi: File '{file_path}' không tồn tại.")
+            return False
+        except Exception as e:
+            print(f"Lỗi khi nhập dữ liệu từ '{file_path}': {e}")
+            import traceback
+
+            traceback.print_exc()
+            return False

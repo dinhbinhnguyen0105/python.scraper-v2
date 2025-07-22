@@ -353,11 +353,8 @@ def on_scraper(
                     print(e)
 
         except Exception as e:
-            print(f"An error occurred: {e}")  # Prints the error message
-            # Print the full traceback
-            print("--- Traceback ---")
-            traceback.print_exc()  # This prints the traceback directly to stderr (console)
-            print("-----------------")
+            print(f"An error occurred: {e}")
+            traceback.print_exc()
             return False
 
     list_group_url = get_groups(1)
