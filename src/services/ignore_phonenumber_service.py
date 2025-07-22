@@ -34,3 +34,6 @@ class IgnorePhoneNumber_Service(BaseService):
 
     def update(self, record_id, payload: IgnorePhoneNumber_Type) -> bool:
         return super().update(record_id, payload, "id")
+    
+    def export_data_to_csv(self, file_path):
+        return super().export_data_to_csv(file_path, IgnorePhoneNumber_Type)

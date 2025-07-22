@@ -30,3 +30,6 @@ class Result_Service(BaseService):
 
     def delete_multiple(self, ids: List[Any]) -> bool:
         return super().delete_multiple(ids)
+
+    def export_data_to_csv(self, file_path):
+        return super().export_data_to_csv(file_path, Result_Type)

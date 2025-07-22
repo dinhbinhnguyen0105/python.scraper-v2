@@ -49,9 +49,9 @@ class Result_Type:
         return Result_Type(
             id=row_data.get("id"),
             article_url=row_data.get("article_url"),
-            article=row_data.get("article"),
+            article_content=row_data.get("article_content"),
             author_url=row_data.get("author_url"),
-            author=row_data.get("author"),
+            author_name=row_data.get("author_name"),
             contact=row_data.get("contact"),
             created_at=row_data.get("created_at"),
         )

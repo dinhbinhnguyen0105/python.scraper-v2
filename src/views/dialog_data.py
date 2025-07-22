@@ -62,7 +62,11 @@ class Data_Dialog(QDialog, Ui_Dialog_Data):
     def config_table(self):
         self.tableView.resizeRowsToContents()
         self.tableView.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
-        self.tableView.resizeColumnToContents(self.table_model.fieldIndex("article"))
+        article_content = self.table_model.fieldIndex("article_content")
+        if article_content:
+            # self.tableView.resizeColumnToContents(article_content)
+            self.tableView.setColumnWidth(article_content, 600)
+            self.tableView.resizeRowsToContents()
         if self.table_name == DATA_TABLES["Results"]:
             self.tableView.doubleClicked.connect(self.on_url_double_clicked)
         self.tableView.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
@@ -84,6 +88,11 @@ class Data_Dialog(QDialog, Ui_Dialog_Data):
         )
         menu.addAction(delete_action)
         menu.popup(global_pos)
+    
+    @pyqtSlot(list)
+    def on_delete(self, list_id: List[int]):
+        self.controller.delete(list_id)
+        self.controller.refresh_data()
 
     @pyqtSlot(QModelIndex)
     def on_url_double_clicked(self, index: QModelIndex):
@@ -107,68 +116,47 @@ class Data_Dialog(QDialog, Ui_Dialog_Data):
     @pyqtSlot()
     def on_import_clicked(self):
         if not self.controller:
-            QMessageBox.warning(self, "Lỗi", "Controller chưa được khởi tạo.")
+            QMessageBox.warning(self, "Error", "Controller not initialized.")
             return
 
         file_path, _ = QFileDialog.getOpenFileName(
             self,
-            "Chọn file CSV để nhập",
+            "Select CSV File to Import",
             "",
             "CSV Files (*.csv);;All Files (*)",
         )
 
         if file_path:
-            # Controller của bạn có thuộc tính service, và service có hàm import_data_from_csv
-            if hasattr(self.controller, "service") and callable(
-                getattr(self.controller.service, "import_data_from_csv", None)
-            ):
+            if hasattr(self.controller, 'service') and callable(getattr(self.controller.service, 'import_data_from_csv', None)):
                 success = self.controller.service.import_data_from_csv(file_path)
                 if success:
-                    QMessageBox.information(
-                        self, "Thành công", "Dữ liệu đã được nhập thành công."
-                    )
-                    self.table_model.select()  # Cập nhật lại dữ liệu hiển thị sau khi import
+                    QMessageBox.information(self, "Success", "Data imported successfully.")
+                    self.table_model.select()
                 else:
-                    QMessageBox.warning(
-                        self,
-                        "Lỗi",
-                        "Có lỗi xảy ra khi nhập dữ liệu. Vui lòng kiểm tra console.",
-                    )
+                    QMessageBox.warning(self, "Error", "An error occurred during data import. Please check the console.")
+                    QMessageBox.warning(self, "Error", "Could not determine data type for this table.")
             else:
-                QMessageBox.warning(
-                    self, "Lỗi", "Controller không hỗ trợ tính năng nhập dữ liệu."
-                )
+                QMessageBox.warning(self, "Error", "Controller does not support data import functionality.")
 
     @pyqtSlot()
     def on_export_clicked(self):
         if not self.controller:
-            QMessageBox.warning(self, "Lỗi", "Controller chưa được khởi tạo.")
+            QMessageBox.warning(self, "Error", "Controller not initialized.")
             return
 
         file_path, _ = QFileDialog.getSaveFileName(
             self,
-            "Lưu dữ liệu ra file CSV",
-            "",  # Thư mục mặc định, có thể để trống hoặc chỉ định
+            "Save Data to CSV File",
+            "",
             "CSV Files (*.csv);;All Files (*)",
         )
 
         if file_path:
-            # Controller của bạn có thuộc tính service, và service có hàm export_data_to_csv
-            if hasattr(self.controller, "service") and callable(
-                getattr(self.controller.service, "export_data_to_csv", None)
-            ):
+            if hasattr(self.controller, 'service') and callable(getattr(self.controller.service, 'export_data_to_csv', None)):
                 success = self.controller.service.export_data_to_csv(file_path)
                 if success:
-                    QMessageBox.information(
-                        self, "Thành công", "Dữ liệu đã được xuất thành công."
-                    )
+                    QMessageBox.information(self, "Success", "Data exported successfully.")
                 else:
-                    QMessageBox.warning(
-                        self,
-                        "Lỗi",
-                        "Có lỗi xảy ra khi xuất dữ liệu. Vui lòng kiểm tra console.",
-                    )
+                    QMessageBox.warning(self, "Error", "An error occurred during data export. Please check the console.")
             else:
-                QMessageBox.warning(
-                    self, "Lỗi", "Controller không hỗ trợ tính năng xuất dữ liệu."
-                )
+                QMessageBox.warning(self, "Error", "Controller does not support data export functionality.")

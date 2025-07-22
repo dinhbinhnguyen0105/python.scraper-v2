@@ -30,25 +30,7 @@ class IgnoreUID_Service(BaseService):
 
     def delete_multiple(self, ids: List[Any]) -> bool:
         return super().delete_multiple(ids)
+    
+    def export_data_to_csv(self, file_path):
+        return super().export_data_to_csv(file_path, IgnoreUID_Type)
 
-
-# if __name__ == "__main__":
-#     import sys
-#     from PyQt6.QtWidgets import QApplication
-#     from src.databases.database import initialize_database
-#     from src.my_types import IgnoreUID_Type
-
-#     app = QApplication([])
-#     initialize_database()
-
-#     ignore_uid_service = IgnoreUID_Service()
-#     ignore_uid_service.create(
-#         IgnoreUID_Type(
-#             id=None,
-#             value="100059122536629",
-#             created_at=None,
-#         )
-#     )
-#     print(ignore_uid_service.read_all())
-
-#     sys.exit(app.exec())

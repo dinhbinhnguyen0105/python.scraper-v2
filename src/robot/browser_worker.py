@@ -1,9 +1,10 @@
 from uuid import uuid4
+import traceback
 from playwright.sync_api import sync_playwright
 from playwright._impl._errors import TargetClosedError
 from undetected_playwright import Tarnished
 
-from PyQt6.QtCore import QRunnable, QObject, pyqtSignal, pyqtSlot
+from PyQt6.QtCore import QRunnable
 from src.my_types import WorkerSignals
 from src.services.result_service import Result_Service
 from src.services.ignore_phonenumber_service import IgnorePhoneNumber_Service
@@ -55,7 +56,7 @@ class BrowserWorker(QRunnable):
         except TargetClosedError:
             return
         except Exception as e:
-            # raise Exception(e)
+            print(traceback.print_exc())
             print(e)
             self.worker_signals.error_signal.emit(
                 self.task_info, self.retry_num, str(e)

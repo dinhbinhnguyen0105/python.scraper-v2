@@ -17,10 +17,6 @@ class BaseModel(QSqlTableModel):
 
     def flags(self, index):
         return Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled
-        default_flags = super().flags(index)
-        if self.headerData(index.column(), Qt.Orientation.Horizontal) == "id":
-            return Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled
-        return default_flags
 
     def get_ids_by_rows(self, rows: List[int]) -> List[int]:
         ids = []

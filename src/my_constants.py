@@ -10,7 +10,7 @@ DATA_TABLES = {
 }
 
 DB_CONNECTION = "DB_CONNECTION"
-DB_CONTAINER_PATH = "/Users/ndb/Dev/python/scraper.data/db"
+DB_CONTAINER_PATH = "/Volumes/KINGSTON/Dev/python/python.scraper-v2/repositories/db"
 
 SCRAPING = "scraping"
 LAUNCHING = "launching"

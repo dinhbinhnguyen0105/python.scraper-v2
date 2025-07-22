@@ -82,6 +82,7 @@ def on_scraper(
             _loading_element = sidebar_locator.first.locator(selectors.S_LOADING)
             try:
                 _loading_element.first.scroll_into_view_if_needed(timeout=60_000)
+                sleep(3)
                 signals.info_signal.emit("Loading indicator scrolled into view.")
             except PlaywrightTimeoutError as e:
                 signals.info_signal.emit(
@@ -123,7 +124,7 @@ def on_scraper(
             signals.info_signal.emit(
                 "WARNING: No group URLs could be retrieved. No groups to post in."
             )
-            return False
+            return []
         return group_urls
 
     def scraping(url: str):
@@ -317,10 +318,11 @@ def on_scraper(
 
                     # TODO get contact
                     article_info["contact"] = ""
+                    regex_pattern = r"[^0-9\s.\-()]+" 
                     for match in PhoneNumberMatcher(
-                        re.sub(r"\D", " ", article_info["content"]), "VN"
+                        re.sub(regex_pattern, " ", article_info["content"]), "VN"
                     ):
-                        article_info["contact"] = re.sub(r"\D", "", match.raw_string)
+                        article_info["contact"] = re.sub(regex_pattern, "", match.raw_string)
 
                     if not services["phone_number"].is_existed(
                         "value", article_info["contact"]
@@ -357,7 +359,7 @@ def on_scraper(
             traceback.print_exc()
             return False
 
-    list_group_url = get_groups(1)
+    list_group_url = get_groups(20)
 
     for group_url in list_group_url:
         scraping(group_url)
