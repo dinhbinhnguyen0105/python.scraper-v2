@@ -324,6 +324,7 @@ def on_scraper(
                                 )
                             )
                     else:
+                        article_locators.first.evaluate("elm => elm.remove()")
                         continue
                         # print(f"Ignore phone number: {article_info['contact']}")
                     # TODO get author_info
@@ -346,7 +347,6 @@ def on_scraper(
 
                     # ellipsis_locator.first.hover(timeout=60_000)
                     # ellipsis_locator.first.highlight()
-                    article_locators = feed_locator.locator(selectors.S_ARTICLE)
                     article_locators.first.evaluate("elm => elm.remove()")
                     signals.sub_progress_signal.emit(
                         task_info.object_name, task_info.post_num, post_index
